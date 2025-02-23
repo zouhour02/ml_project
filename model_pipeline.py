@@ -93,12 +93,15 @@ def evaluate_model(model, X_test, y_test):
     report = classification_report(y_test, predictions, target_names=target_names)
     print("\nClassification Report:\n")
     print(report)
-    
-def save_model(model, file_path):
-    """Save the model to a file."""
+
+    # Return the metrics for further use
+    return accuracy, precision, recall, f1
+
+def save_model(model, file_path="model.joblib"):
+    """Save the model to a file (default: model.joblib)."""
     with open(file_path, 'wb') as file:
         pickle.dump(model, file)
-    print("Model saved to", file_path)
+    print(f"Model saved to {file_path}")
 
 def load_model(file_path):
     """Load the model from a file."""
