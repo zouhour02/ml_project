@@ -17,7 +17,7 @@ except Exception as e:
     print(f"Error loading model: {e}")
 
 # ---------------------------
-# Prediction Endpoint (Option A)
+# Prediction Endpoint 
 # ---------------------------
 class FeaturesInput(BaseModel):
     features: List[float]  # One-dimensional list of floats
