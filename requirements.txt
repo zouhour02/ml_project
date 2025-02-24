@@ -7,3 +7,5 @@ mlflow
 fastapi
 uvicorn
 joblib
+gunicorn
+
