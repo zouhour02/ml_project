@@ -8,4 +8,8 @@ fastapi
 uvicorn
 joblib
 gunicorn
+flake8
+pylint
+black
+mypy
 
