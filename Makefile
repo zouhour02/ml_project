@@ -50,6 +50,50 @@ test:
 clean:
 	rm -rf __pycache__ *.pkl venv
 	
+###################### Automatisation CI/CD ###############################
+
+# Check Python code quality, format, and security
+check:
+	@echo "Running Flake8..."
+	flake8 .
+	@echo "Running Black..."
+	black . --check
+	@echo "Running Bandit..."
+	bandit -r .
+
+test:
+	@echo "Running Tests..."
+	pytest tests/
+
+# Watch for Python file changes and run checks and tests
+watch:
+	@echo "Starting file watcher..."
+	while true; do \
+		echo "Waiting for Python file changes..."; \
+		inotifywait -r -e modify . | grep --line-buffered '\.py$$' && \
+		echo "Python file changed, running checks and tests..."; \
+		make check test; \
+	done
+
+
+# Watch for data file changes and trigger training, evaluation, and saving
+watch-data:
+	@echo "Starting data file watcher..."
+	while true; do \
+		echo "Waiting for data file changes..."; \
+		inotifywait -r -e modify . | grep --line-buffered '\\.pkl$' && \
+		echo "Data file changed, running model training..." && \
+		make train evaluate save; \
+	done
+
+# Push Docker image after a commit (if inside a Git repo)
+push-auto:
+	@if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then \
+		make push; \
+	else \
+		echo "Not inside a Git repository. Skipping push."; \
+	fi
+
 run-api:
 	uvicorn app:app --reload --host 0.0.0.0 --port 8001
 	
