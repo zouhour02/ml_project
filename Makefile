@@ -50,52 +50,9 @@ test:
 clean:
 	rm -rf __pycache__ *.pkl venv
 	
-###################### Automatisation CI/CD ###############################
-
-# Check Python code quality, format, and security
-check:
-	@echo "Running Flake8..."
-	flake8 .
-	@echo "Running Black..."
-	black . --check
-	@echo "Running Bandit..."
-	bandit -r .
-
-test:
-	@echo "Running Tests..."
-	pytest tests/
-
-# Watch for Python file changes and run checks and tests
-watch:
-	@echo "Starting file watcher..."
-	while true; do \
-		echo "Waiting for Python file changes..."; \
-		inotifywait -r -e modify . | grep --line-buffered '\.py$$' && \
-		echo "Python file changed, running checks and tests..."; \
-		make check test; \
-	done
-
-
-# Watch for data file changes and trigger training, evaluation, and saving
-watch-data:
-	@echo "Starting data file watcher..."
-	while true; do \
-		echo "Waiting for data file changes..."; \
-		inotifywait -r -e modify . | grep --line-buffered '\\.pkl$' && \
-		echo "Data file changed, running model training..." && \
-		make train evaluate save; \
-	done
-
-# Push Docker image after a commit (if inside a Git repo)
-push-auto:
-	@if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then \
-		make push; \
-	else \
-		echo "Not inside a Git repository. Skipping push."; \
-	fi
 
 run-api:
-	uvicorn app:app --reload --host 0.0.0.0 --port 8001
+	uvicorn app:app --reload --host 127.0.0.1 --port 8001
 	
 
 # Run MLflow UI
@@ -103,17 +60,39 @@ mlflow-ui:
 	mlflow ui --backend-store-uri file:///home/zouhour/mlruns
 
 
-	
-	# Construire l'image Docker
-build:
-	docker build -t zouhour_joudi_4ds1_mlops .
+#-------------------------------------------------------------------------
+# Build Images
+build-pipeline:
+	docker build -t pipeline_image -f Dockerfile.pipeline .
 
-# Exécuter le conteneur Docker
-run:
-	docker run -p 8000:8000 zouhour_joudi_4ds1_mlops
+build-fastapi:
+	docker build -t fastapi_image -f Dockerfile.fastapi .
 
-# Pousser l'image sur Docker Hub
-push:
-	docker login && docker tag zouhour_joudi_4ds1_mlops zouhour451/zouhour_joudi_4ds1_mlops && docker push zouhour451/zouhour_joudi_4ds1_mlops
+build-mlflow:
+	docker build -t mlflow_image -f Dockerfile.mlflow .
+
+# Run Containers
+run-pipeline:
+	docker run --rm pipeline_image
+
+run-fastapi:
+	docker run -p 5001:5001 fastapi_image
+
+run-mlflow:
+	docker run -p 5000:5000 mlflow_image
+
+# Push to Docker Hub
+push-pipeline:
+	docker tag pipeline_image zouhour451/pipeline_image
+	docker push zouhour451/pipeline_image
+
+push-fastapi:
+	docker tag fastapi_image zouhour451/fastapi_image
+	docker push zouhour451/fastapi_image
+
+push-mlflow:
+	docker tag mlflow_image zouhour451/mlflow_image
+	docker push zouhour451/mlflow_image
+
 
 
