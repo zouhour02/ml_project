@@ -1,10 +1,12 @@
-from flask import Flask, request, render_template
 import pickle
 import numpy as np
 import pandas as pd
-from twilio.rest import Client
 import os
 from dotenv import load_dotenv
+from sklearn.ensemble import RandomForestClassifier
+from flask import Flask, request, render_template,redirect, url_for, flash
+from twilio.rest import Client
+
 
 # Load environment variables
 load_dotenv()
@@ -20,6 +22,8 @@ if not account_sid or not auth_token or not from_phone:
 
 # Initialize Flask app
 app = Flask(__name__)
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "d9f1e8b3c4a65e1b0f3c7e1a2d9f6b8a9c4d7e3a5b6c7d8e9f0a1b2c3d4e5f6a")
+
 
 # Load the pre-trained model
 model = pickle.load(open('model.pkl', 'rb'))
@@ -83,6 +87,44 @@ def predict():
     prediction = model.predict(input_df)[0]
 
     return render_template('result.html', prediction=prediction, top_features=top_features)
+    
+# Retrain route
+@app.route('/retrain', methods=['GET', 'POST'])
+def retrain():
+    global model
+    
+    if request.method == 'POST':
+        n_estimators = int(request.form.get('n_estimators', 100))
+        max_depth = request.form.get('max_depth')
+        max_depth = int(max_depth) if max_depth else None
+        
+        try:
+            # Load new training data
+            data_df = pd.read_csv('churn-bigml-80.csv')
+
+            if "Churn" not in data_df.columns:
+                flash("Training data must contain a 'Churn' column.", "danger")
+                return redirect(url_for('retrain'))
+
+            # Split into features and target
+            X = data_df.drop("Churn", axis=1)
+            y = data_df["Churn"]
+            X = pd.get_dummies(X, drop_first=True)
+
+            # Retrain model
+            model = RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth, random_state=42)
+            model.fit(X, y)
+
+            # Save the retrained model
+            pickle.dump(model, open('model.pkl', 'wb'))
+            flash("Model retrained successfully!", "success")
+        
+        except Exception as e:
+            flash(f"Error during retraining: {e}", "danger")
+        
+        return redirect(url_for('home'))
+    
+    return render_template('retrain.html')
 
 @app.route('/send_sms', methods=['POST'])
 def send_sms_route():
@@ -92,7 +134,7 @@ def send_sms_route():
     prediction = request.form.get('prediction')
 
     if not prediction:
-        return "⚠️ Missing prediction data!", 400
+        return " Missing prediction data!", 400
 
     message = f"The predicted value is: {prediction}"
 
@@ -102,5 +144,5 @@ def send_sms_route():
     return render_template('sms_sent.html', message_sid=sms_status)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5001, debug=True)
 
