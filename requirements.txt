@@ -13,4 +13,8 @@ pylint
 black
 mypy
 bandit
+flask
+python-dotenv
+twilio
+
 
