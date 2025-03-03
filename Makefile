@@ -60,39 +60,35 @@ mlflow-ui:
 	mlflow ui --backend-store-uri file:///home/zouhour/mlruns
 
 
-#-------------------------------------------------------------------------
-# Build Images
-build-pipeline:
-	docker build -t pipeline_image -f Dockerfile.pipeline .
+#-----------------------Docker---------------------------
+# Variables
+IMAGE_NAME=zouhour451/mlflow-flask
+CONTAINER_NAME=mlflow_flask_container
+PORTS=-p 5000:5000 -p 5001:5001
+VOLUME=-v ~/mlruns:/home/zouhour/mlruns
 
-build-fastapi:
-	docker build -t fastapi_image -f Dockerfile.fastapi .
+# Pull the latest image from Docker Hub
+pull:
+	docker pull $(IMAGE_NAME):latest
 
-build-mlflow:
-	docker build -t mlflow_image -f Dockerfile.mlflow .
+# Stop & remove the existing container if running
+stop:
+	-docker stop $(CONTAINER_NAME) || true
+	-docker rm $(CONTAINER_NAME) || true
 
-# Run Containers
-run-pipeline:
-	docker run --rm pipeline_image
+# Run the container
+run: stop
+	docker run -d $(PORTS) --name $(CONTAINER_NAME) $(VOLUME) $(IMAGE_NAME):latest
 
-run-fastapi:
-	docker run -p 5001:5001 fastapi_image
+# Full deployment: Pull, stop old container, and run
+deploy: pull run
 
-run-mlflow:
-	docker run -p 5000:5000 mlflow_image
+# Show logs
+logs:
+	docker logs -f $(CONTAINER_NAME)
 
-# Push to Docker Hub
-push-pipeline:
-	docker tag pipeline_image zouhour451/pipeline_image
-	docker push zouhour451/pipeline_image
-
-push-fastapi:
-	docker tag fastapi_image zouhour451/fastapi_image
-	docker push zouhour451/fastapi_image
-
-push-mlflow:
-	docker tag mlflow_image zouhour451/mlflow_image
-	docker push zouhour451/mlflow_image
-
+# Stop & remove the container completely
+clean: stop
+	docker rmi $(IMAGE_NAME):latest
 
 
