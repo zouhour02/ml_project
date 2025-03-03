@@ -1,18 +1,27 @@
-# Use an official Python runtime as a parent image
+# Base image
 FROM python:3.9
 
-# Set the working directory in the container
+# Set working directory
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
+# Copy project files
 COPY . /app
 
-# Install any needed dependencies
+# Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose the port FastAPI will run on
-EXPOSE 5001
+# Install Supervisor to manage multiple processes
+RUN apt-get update && apt-get install -y supervisor
 
-# Run the FastAPI app
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5001"]
+# Create Supervisor config
+RUN mkdir -p /var/log/supervisor
+
+# Supervisor config file
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Expose ports for Flask and MLflow
+EXPOSE 5000 5001
+
+# Run Supervisor
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
 
